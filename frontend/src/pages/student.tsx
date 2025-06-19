@@ -1,13 +1,30 @@
 import { useEffect, useState } from "react";
 import TaskCard from "@/components/TaskCard"; // zakładam, że TaskCard znajduje się w src/components
 
+interface Task {
+    id: number;
+    name: string;
+    description: string;
+    deadline: string;
+    status: string;
+}
+
+interface RankingEntry {
+    student_name?: string;
+    name?: string;
+    score?: number;
+    points?: number;
+}
+
 export default function StudentDashboard() {
-    const [tasks, setTasks] = useState<any[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedFiles, setSelectedFiles] = useState<Record<number, File | null>>({});
     const [uploading, setUploading] = useState<Record<number, boolean>>({});
     const [uploaded, setUploaded] = useState<Record<number, boolean>>({});
-    const [commentText, setCommentText] = useState<Record<number, string>>({});
+    const [showAll, setShowAll] = useState(false);
+    const [ranking, setRanking] = useState<RankingEntry[]>([]);
+    const [rankingLoading, setRankingLoading] = useState(true);
 
 
     useEffect(() => {
@@ -33,10 +50,30 @@ export default function StudentDashboard() {
             }
         };
 
+        const fetchRanking = async () => {
+            const token = localStorage.getItem("access_token");
+            if (!token) return;
+
+            try {
+                const res = await fetch("http://localhost:8000/api/top-ranking/", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setRanking(data);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setRankingLoading(false);
+            }
+        };
+
         fetchTasks();
+        fetchRanking();
     }, []);
 
-    const handleFileChange = (taskId: number, file: File) => {
+    const handleFileChange = (taskId: number, file: File | null) => {
         setSelectedFiles(prev => ({ ...prev, [taskId]: file }));
     };
 
@@ -83,22 +120,43 @@ export default function StudentDashboard() {
                 <p className="text-center text-gray-600">Brak przydzielonych zadań</p>
             ) : (
                 <div className="space-y-6 max-w-3xl mx-auto">
-                    {tasks.map(task => (
+                    {tasks.length > 3 && (
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowAll((p) => !p)}
+                                className="text-blue-600 text-sm hover:underline"
+                            >
+                                {showAll ? "Pokaż mniej" : "Zobacz wszystkie"}
+                            </button>
+                        </div>
+                    )}
+                    {(showAll ? tasks : tasks.slice(0, 3)).map((task) => (
                         <TaskCard
                             key={task.id}
                             task={task}
-                            file={selectedFiles[task.id] || null}
-                            onFileChange={(file) => handleFileChange(task.id, file)}
+                            onFileChange={handleFileChange}
                             onSubmit={() => handleSubmit(task.id)}
-                            isUploading={uploading[task.id] || false}
-                            isUploaded={uploaded[task.id] || false}
-                            commentText={commentText}
-                            setCommentText={setCommentText}
-
+                            uploading={uploading[task.id] || false}
+                            uploaded={uploaded[task.id] || false}
                         />
                     ))}
                 </div>
             )}
+
+            <section className="max-w-3xl mx-auto mt-12">
+                <h2 className="text-2xl font-bold mb-4">📊 Ranking uczniów</h2>
+                {rankingLoading ? (
+                    <p className="text-gray-500">Ładowanie...</p>
+                ) : (
+                    <ol className="space-y-1">
+                        {ranking.map((r, idx) => (
+                            <li key={idx}>
+                                {idx + 1}. {r.student_name || r.name} – {r.score ?? r.points} zadań
+                            </li>
+                        ))}
+                    </ol>
+                )}
+            </section>
         </div>
     );
 }
