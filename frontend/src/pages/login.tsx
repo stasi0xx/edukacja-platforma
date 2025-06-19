@@ -27,6 +27,7 @@ export default function LoginPage() {
                 setError(data.detail || "Błędne dane logowania")
             }
         } catch (err) {
+            console.error(err)
             setError("Błąd połączenia z API")
         }
     }
