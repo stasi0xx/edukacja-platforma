@@ -11,3 +11,4 @@ media/
 
 # Node (if any)
 node_modules/
+\n# Virtual environments\n.venv/\nbackend/venv/\nbackend/.venv/

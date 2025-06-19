@@ -36,17 +36,19 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         if not comment_text:
             return Response({"error": "Brak komentarza"}, status=400)
 
-        Comment.objects.create(
-            submission=submission,
-            user=request.user,
-            text=comment_text
+        serializer = CommentSerializer(
+            data={"submission": submission.id, "text": comment_text},
+            context={"request": request},
         )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        return Response({"status": "Komentarz zapisany!"})
+        return Response(serializer.data, status=201)
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated]
 
 class RankingViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ranking.objects.all().order_by('-points')  # lub bez .order_by()
