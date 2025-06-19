@@ -34,9 +34,17 @@ class SubmissionSerializer(serializers.ModelSerializer):
         validated_data["student"] = request.user.studentprofile
         return super().create(validated_data)
 class CommentSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+
     class Meta:
         model = Comment
-        fields = '__all__'
+        fields = ["id", "submission", "user", "text", "created_at"]
+        read_only_fields = ["user", "created_at"]
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        validated_data["user"] = request.user
+        return super().create(validated_data)
 
 class RankingSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.user.username', read_only=True)
