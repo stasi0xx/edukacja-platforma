@@ -26,12 +26,17 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework.permissions import AllowAny
 from core import views as core_views
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 schema_view = get_schema_view(
     openapi.Info(title="Edukacja API", default_version="v1"),
     public=True,
     permission_classes=[AllowAny],
 )
+from core.views import my_tasks, SubmissionUploadView
 
 router = routers.DefaultRouter()
 router.register(r"users", core_views.UserViewSet)
@@ -49,9 +54,16 @@ urlpatterns = [
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/", include(router.urls)),
+    path("api/", include("core.urls")),
     path(
         "swagger/",
         schema_view.with_ui("swagger", cache_timeout=0),
         name="schema-swagger-ui",
     ),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path("api/my-student-profile/", core_views.MyStudentProfileView.as_view()),
+    path("api/my-tasks/", my_tasks),
+    path("api/submit-task/", SubmissionUploadView.as_view(), name="submit-task"),
+    path("api/submissions/<int:pk>/add_comment/", core_views.SubmissionViewSet.as_view({'patch': 'add_comment'})),
 ]

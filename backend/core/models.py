@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from django.contrib.auth import get_user_model
+
 
 
 class User(AbstractUser):
@@ -10,6 +12,7 @@ class User(AbstractUser):
         PARENT = "parent", "Parent"
 
     role = models.CharField(max_length=20, choices=Role.choices)
+
 
 
 class StudentProfile(models.Model):
@@ -22,6 +25,7 @@ class StudentProfile(models.Model):
 
 class TeacherProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=100)
     bio = models.TextField(blank=True)
 
     def __str__(self):
@@ -39,6 +43,10 @@ class Task(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     deadline = models.DateField(null=True, blank=True)
+    assigned_students = models.ManyToManyField(
+    StudentProfile,
+    related_name="tasks"
+)
     created_by = models.ForeignKey(
         TeacherProfile, related_name="tasks", on_delete=models.SET_NULL, null=True
     )
@@ -67,7 +75,7 @@ class Submission(models.Model):
 
 class Comment(models.Model):
     submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name="comments")
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 

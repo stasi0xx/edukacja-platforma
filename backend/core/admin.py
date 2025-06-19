@@ -13,11 +13,15 @@ from .models import (
     ParentChildRelation,
 )
 
+class TaskAdmin(admin.ModelAdmin):
+    list_display = ("name", "created_by", "deadline")
+    filter_horizontal = ("assigned_students",)
+
 admin.site.register(User, UserAdmin)
 admin.site.register(StudentProfile)
 admin.site.register(TeacherProfile)
 admin.site.register(ParentProfile)
-admin.site.register(Task)
+admin.site.register(Task, TaskAdmin)
 admin.site.register(Submission)
 admin.site.register(Comment)
 admin.site.register(Ranking)
