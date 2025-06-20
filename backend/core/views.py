@@ -1,5 +1,6 @@
 from rest_framework import viewsets, generics
 from .models import Task, Submission, Comment, Ranking, User, StudentProfile, TeacherProfile, ParentProfile, ParentChildRelation
+from django.db import models
 from .serializers import (
     TaskSerializer, SubmissionSerializer, CommentSerializer,
     RankingSerializer, UserSerializer, StudentProfileSerializer, TeacherProfileSerializer, ParentProfileSerializer, ParentChildRelationSerializer
@@ -16,8 +17,11 @@ def my_tasks(request):
     student_profile = getattr(request.user, "studentprofile", None)
     if not student_profile:
         return Response({"error": "Brak profilu ucznia"}, status=403)
-    
-    tasks = Task.objects.filter(assigned_students=student_profile)
+
+    tasks = (
+        Task.objects.filter(assigned_students=student_profile)
+        .order_by("-created_at")
+    )
     serializer = TaskSerializer(tasks, many=True, context={"request": request})
     return Response(serializer.data)
 class TaskViewSet(viewsets.ModelViewSet):
@@ -28,21 +32,38 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     queryset = Submission.objects.all()
     serializer_class = SubmissionSerializer
 
-    @action(detail=True, methods=['patch'], permission_classes=[IsAuthenticated])
+    def _has_access(self, user, submission):
+        if hasattr(user, "studentprofile") and submission.student == user.studentprofile:
+            return True
+        if hasattr(user, "teacherprofile") and submission.task.created_by == user.teacherprofile:
+            return True
+        return False
+
+    @action(detail=True, methods=["get"], permission_classes=[IsAuthenticated])
+    def comments(self, request, pk=None):
+        submission = self.get_object()
+        if not self._has_access(request.user, submission):
+            return Response(status=403)
+        comments = submission.comments.order_by("created_at")
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["patch", "post"], permission_classes=[IsAuthenticated])
     def add_comment(self, request, pk=None):
         submission = self.get_object()
-        comment_text = request.data.get("comment")
-
-        if not comment_text:
+        if not self._has_access(request.user, submission):
+            return Response(status=403)
+        text = request.data.get("text") or request.data.get("comment")
+        if not text:
             return Response({"error": "Brak komentarza"}, status=400)
-
-        serializer = CommentSerializer(
-            data={"submission": submission.id, "text": comment_text},
-            context={"request": request},
+        comment = Comment.objects.create(
+            submission=submission,
+            author=request.user,
+            text=text,
+            role="teacher" if hasattr(request.user, "teacherprofile") else "student",
         )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
+        comments = submission.comments.order_by("created_at")
+        serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data, status=201)
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -88,3 +109,19 @@ class MyStudentProfileView(APIView):
         if not profile:
             return Response({"detail": "Brak profilu ucznia."}, status=404)
         return Response(StudentProfileSerializer(profile).data)
+
+
+class TopRankingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        students = (
+            StudentProfile.objects.annotate(
+                completed=models.Count("submissions")
+            )
+            .order_by("-completed")[:10]
+        )
+        data = [
+            {"username": s.user.username, "completed": s.completed} for s in students
+        ]
+        return Response(data)
