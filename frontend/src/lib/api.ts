@@ -1,5 +1,7 @@
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export async function fetchCurrentUser(token: string) {
-    const res = await fetch("http://localhost:8000/api/me/", {
+    const res = await fetch(`${API_URL}/api/me/`, {
         headers: {
             Authorization: `Bearer ${token}`,
         },
