@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: my-backend
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn backend.wsgi:application"
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        value: "dodaj_tutaj"
+      - key: ALLOWED_HOSTS
+        value: "twojadomena.onrender.com"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: my-database
+          property: connectionString
+databases:
+  - name: my-database
+    databaseName: mydbname
+    user: myuser
