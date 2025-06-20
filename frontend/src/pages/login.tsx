@@ -3,6 +3,8 @@ import { useState } from "react"
 import { useRouter } from "next/router"
 import { fetchCurrentUser } from "@/lib/api"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+
 export default function LoginPage() {
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
@@ -11,7 +13,7 @@ export default function LoginPage() {
 
     const handleLogin = async () => {
         try {
-            const res = await fetch("http://127.0.0.1:8000/api/token/", {
+            const res = await fetch(`${API_URL}/api/token/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
