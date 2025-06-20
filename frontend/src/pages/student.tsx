@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import TaskCard from "@/components/TaskCard"; // zakładam, że TaskCard znajduje się w src/components
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 interface Task {
     id: number;
     name: string;
@@ -33,7 +35,7 @@ export default function StudentDashboard() {
             if (!token) return;
 
             try {
-                const res = await fetch("http://localhost:8000/api/my-tasks/", {
+                const res = await fetch(`${API_URL}/api/my-tasks/`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                         "Content-Type": "application/json",
@@ -55,7 +57,7 @@ export default function StudentDashboard() {
             if (!token) return;
 
             try {
-                const res = await fetch("http://localhost:8000/api/top-ranking/", {
+                const res = await fetch(`${API_URL}/api/top-ranking/`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (res.ok) {
@@ -89,7 +91,7 @@ export default function StudentDashboard() {
         formData.append("task", taskId.toString());
 
         try {
-            const res = await fetch("http://localhost:8000/api/submit-task/", {
+            const res = await fetch(`${API_URL}/api/submit-task/`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 interface Task {
     id: number;
     name: string;
@@ -40,7 +42,7 @@ const TaskCard = ({
         setLoadingComments(true);
         try {
             const res = await fetch(
-                `http://localhost:8000/api/submissions/${task.id}/comments/`,
+                `${API_URL}/api/submissions/${task.id}/comments/`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -72,7 +74,7 @@ const TaskCard = ({
         if (!comment) return;
 
         try {
-            const res = await fetch(`http://localhost:8000/api/submissions/${task.id}/add_comment/`, {
+            const res = await fetch(`${API_URL}/api/submissions/${task.id}/add_comment/`, {
                 method: "PATCH",
                 headers: {
                     Authorization: `Bearer ${token}`,
