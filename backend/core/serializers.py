@@ -1,7 +1,16 @@
 from rest_framework import serializers
+from django.utils import timezone
 from .models import (
-    Task, Submission, Comment, Ranking,
-    StudentProfile, ParentProfile, TeacherProfile, User, ParentChildRelation
+    Task,
+    Submission,
+    Comment,
+    Ranking,
+    StudentProfile,
+    ParentProfile,
+    TeacherProfile,
+    User,
+    ParentChildRelation,
+    Group,
 )
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -46,11 +55,14 @@ class TaskSerializer(serializers.ModelSerializer):
 class SubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
-        fields = ["id", "student", "task", "file"]
-        read_only_fields = ["student"]
+        fields = ["id", "student", "task", "file", "status", "submitted_at"]
+        read_only_fields = ["student", "status", "submitted_at"]
+
     def create(self, validated_data):
         request = self.context["request"]
         validated_data["student"] = request.user.studentprofile
+        validated_data["status"] = "submitted"
+        validated_data["submitted_at"] = timezone.now()
         return super().create(validated_data)
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField(read_only=True)
@@ -85,6 +97,17 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'role']
+
+
+class StudentBriefSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='user.get_full_name')
+    email = serializers.EmailField(source='user.email')
+
+    class Meta:
+        model = StudentProfile
+        fields = ['id', 'full_name', 'email']
+
+
 class StudentProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentProfile
@@ -103,4 +126,10 @@ class ParentProfileSerializer(serializers.ModelSerializer):
 class ParentChildRelationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParentChildRelation
+        fields = '__all__'
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
         fields = '__all__'

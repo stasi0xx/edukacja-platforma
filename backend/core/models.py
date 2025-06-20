@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 
 
@@ -15,14 +16,6 @@ class User(AbstractUser):
 
 
 
-class StudentProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    points = models.PositiveIntegerField(default=0)
-
-    def __str__(self):
-        return self.user.username
-
-
 class TeacherProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     subject = models.CharField(max_length=100)
@@ -31,6 +24,22 @@ class TeacherProfile(models.Model):
     def __str__(self):
         return self.user.username
 
+
+class Group(models.Model):
+    name = models.CharField(max_length=100)
+    teacher = models.ForeignKey("TeacherProfile", on_delete=models.CASCADE, related_name="groups")
+
+    def __str__(self):
+        return self.name
+
+
+class StudentProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    points = models.PositiveIntegerField(default=0)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="students", null=True, blank=True)
+
+    def __str__(self):
+        return self.user.username
 
 class ParentProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -63,10 +72,16 @@ def submission_upload_path(instance, filename):
 class Submission(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="submissions")
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name="submissions")
-    file = models.FileField(upload_to=submission_upload_path)
+    file = models.FileField(upload_to=submission_upload_path, null=True, blank=True)
     comment = models.TextField(blank=True)
     grade = models.IntegerField(null=True, blank=True)
     feedback = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True, default=timezone.now)
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("submitted", "Submitted")],
+        default="submitted",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
