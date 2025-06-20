@@ -37,6 +37,13 @@ schema_view = get_schema_view(
     permission_classes=[AllowAny],
 )
 from core.views import my_tasks, SubmissionUploadView, TopRankingView
+from core.views import (
+    TeacherMyStudentsView,
+    TeacherStudentSubmissionsView,
+    TeacherAddCommentView,
+    TeacherSubmissionCommentsView,
+    TeacherTaskCreateView,
+)
 
 router = routers.DefaultRouter()
 router.register(r"users", core_views.UserViewSet)
@@ -74,4 +81,18 @@ urlpatterns = [
         core_views.SubmissionViewSet.as_view({"get": "comments"}),
     ),
     path("api/top-ranking/", TopRankingView.as_view()),
+    path("api/teacher/my-students/", TeacherMyStudentsView.as_view()),
+    path(
+        "api/teacher/student/<int:pk>/submissions/",
+        TeacherStudentSubmissionsView.as_view(),
+    ),
+    path(
+        "api/teacher/submission/<int:pk>/add_comment/",
+        TeacherAddCommentView.as_view(),
+    ),
+    path(
+        "api/teacher/submission/<int:pk>/comments/",
+        TeacherSubmissionCommentsView.as_view(),
+    ),
+    path("api/teacher/tasks/create/", TeacherTaskCreateView.as_view()),
 ]

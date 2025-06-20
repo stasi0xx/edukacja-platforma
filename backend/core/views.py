@@ -1,9 +1,29 @@
 from rest_framework import viewsets, generics
-from .models import Task, Submission, Comment, Ranking, User, StudentProfile, TeacherProfile, ParentProfile, ParentChildRelation
+from .models import (
+    Task,
+    Submission,
+    Comment,
+    Ranking,
+    User,
+    StudentProfile,
+    TeacherProfile,
+    ParentProfile,
+    ParentChildRelation,
+    Group,
+)
 from django.db import models
 from .serializers import (
-    TaskSerializer, SubmissionSerializer, CommentSerializer,
-    RankingSerializer, UserSerializer, StudentProfileSerializer, TeacherProfileSerializer, ParentProfileSerializer, ParentChildRelationSerializer
+    TaskSerializer,
+    SubmissionSerializer,
+    CommentSerializer,
+    RankingSerializer,
+    UserSerializer,
+    StudentProfileSerializer,
+    TeacherProfileSerializer,
+    ParentProfileSerializer,
+    ParentChildRelationSerializer,
+    StudentBriefSerializer,
+    GroupSerializer,
 )
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -125,3 +145,105 @@ class TopRankingView(APIView):
             {"username": s.user.username, "completed": s.completed} for s in students
         ]
         return Response(data)
+
+
+class TeacherMyStudentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        teacher = getattr(request.user, "teacherprofile", None)
+        if not teacher:
+            return Response(status=403)
+        students = (
+            StudentProfile.objects.filter(group__teacher=teacher)
+            .select_related("user")
+            .order_by("user__first_name", "user__last_name")
+        )
+        serializer = StudentBriefSerializer(students, many=True)
+        return Response(serializer.data)
+
+
+class TeacherStudentSubmissionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        teacher = getattr(request.user, "teacherprofile", None)
+        if not teacher:
+            return Response(status=403)
+        student = StudentProfile.objects.filter(id=pk, group__teacher=teacher).first()
+        if not student:
+            return Response(status=404)
+        submissions = Submission.objects.filter(student=student).select_related("task")
+        data = [
+            {
+                "task_name": s.task.name,
+                "file": request.build_absolute_uri(s.file.url) if s.file else None,
+                "submitted_at": s.submitted_at,
+                "comment_count": s.comments.count(),
+                "status": s.status,
+            }
+            for s in submissions
+        ]
+        return Response(data)
+
+
+class TeacherAddCommentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        teacher = getattr(request.user, "teacherprofile", None)
+        if not teacher:
+            return Response(status=403)
+        submission = Submission.objects.filter(id=pk, task__created_by=teacher).first()
+        if not submission:
+            return Response(status=404)
+        text = request.data.get("text")
+        if not text:
+            return Response({"error": "Brak komentarza"}, status=400)
+        Comment.objects.create(
+            submission=submission,
+            author=request.user,
+            text=text,
+            role="teacher",
+        )
+        comments = submission.comments.order_by("created_at")
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+
+
+class TeacherSubmissionCommentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        teacher = getattr(request.user, "teacherprofile", None)
+        if not teacher:
+            return Response(status=403)
+        submission = Submission.objects.filter(id=pk, task__created_by=teacher).first()
+        if not submission:
+            return Response(status=404)
+        comments = submission.comments.order_by("created_at")
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+
+
+class TeacherTaskCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        teacher = getattr(request.user, "teacherprofile", None)
+        if not teacher:
+            return Response(status=403)
+        serializer = TaskSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+        group_id = request.data.get("group_id")
+        group = Group.objects.filter(id=group_id, teacher=teacher).first()
+        if not group:
+            return Response({"error": "Brak grupy"}, status=404)
+        task = serializer.save(created_by=teacher)
+        assigned_students = list(group.students.all())
+        task.assigned_students.set(assigned_students)
+        for student in assigned_students:
+            Submission.objects.create(task=task, student=student, status="pending")
+        names = [s.user.get_full_name() or s.user.username for s in assigned_students]
+        return Response({"task_id": task.id, "students": names}, status=201)

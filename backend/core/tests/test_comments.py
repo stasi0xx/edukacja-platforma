@@ -7,7 +7,14 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from core.models import StudentProfile, TeacherProfile, Task, Submission, Comment
+from core.models import (
+    StudentProfile,
+    TeacherProfile,
+    Task,
+    Submission,
+    Comment,
+    Group,
+)
 
 
 class CommentTests(APITestCase):
@@ -19,6 +26,9 @@ class CommentTests(APITestCase):
 
         teacher_user = User.objects.create_user(username="teacher", password="pass", role="teacher")
         self.teacher_profile = TeacherProfile.objects.create(user=teacher_user, subject="Math")
+        self.group = Group.objects.create(name="G1", teacher=self.teacher_profile)
+        self.student_profile.group = self.group
+        self.student_profile.save()
         self.task = Task.objects.create(name="Test", description="desc", created_by=self.teacher_profile)
         self.task.assigned_students.add(self.student_profile)
         self.submission = Submission.objects.create(task=self.task, student=self.student_profile, file="test.txt")
@@ -69,3 +79,28 @@ class CommentTests(APITestCase):
         first_task = response.data[0]
         self.assertTrue(first_task["status"])  # has submission
         self.assertIsNotNone(first_task["submission_id"])
+
+    def test_teacher_my_students_endpoint(self):
+        self.client.force_authenticate(user=self.teacher_profile.user)
+        url = "/api/teacher/my-students/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.student_profile.id)
+
+    def test_teacher_student_submissions_endpoint(self):
+        self.client.force_authenticate(user=self.teacher_profile.user)
+        url = f"/api/teacher/student/{self.student_profile.id}/submissions/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]["status"], "submitted")
+
+    def test_teacher_add_comment_endpoint(self):
+        self.client.force_authenticate(user=self.teacher_profile.user)
+        url = f"/api/teacher/submission/{self.submission.id}/add_comment/"
+        response = self.client.post(url, {"text": "Well done"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        comment = Comment.objects.last()
+        self.assertEqual(comment.role, "teacher")
+
