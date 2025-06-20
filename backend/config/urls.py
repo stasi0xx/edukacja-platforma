@@ -36,7 +36,7 @@ schema_view = get_schema_view(
     public=True,
     permission_classes=[AllowAny],
 )
-from core.views import my_tasks, SubmissionUploadView
+from core.views import my_tasks, SubmissionUploadView, TopRankingView
 
 router = routers.DefaultRouter()
 router.register(r"users", core_views.UserViewSet)
@@ -65,5 +65,13 @@ urlpatterns = [
     path("api/my-student-profile/", core_views.MyStudentProfileView.as_view()),
     path("api/my-tasks/", my_tasks),
     path("api/submit-task/", SubmissionUploadView.as_view(), name="submit-task"),
-    path("api/submissions/<int:pk>/add_comment/", core_views.SubmissionViewSet.as_view({'patch': 'add_comment'})),
+    path(
+        "api/submissions/<int:pk>/add_comment/",
+        core_views.SubmissionViewSet.as_view({"patch": "add_comment", "post": "add_comment"}),
+    ),
+    path(
+        "api/submissions/<int:pk>/comments/",
+        core_views.SubmissionViewSet.as_view({"get": "comments"}),
+    ),
+    path("api/top-ranking/", TopRankingView.as_view()),
 ]

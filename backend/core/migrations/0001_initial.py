@@ -250,9 +250,16 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("text", models.TextField()),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[("student", "Student"), ("teacher", "Teacher")],
+                        max_length=20,
+                    ),
+                ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
-                    "user",
+                    "author",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         to=settings.AUTH_USER_MODEL,
