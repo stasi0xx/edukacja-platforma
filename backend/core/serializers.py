@@ -82,11 +82,15 @@ class CommentSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class RankingSerializer(serializers.ModelSerializer):
-    student_name = serializers.CharField(source='student.user.username', read_only=True)
+    """Serialize ranking with username and points."""
+
+    student_name = serializers.CharField(
+        source="student.user.username", read_only=True
+    )
 
     class Meta:
         model = Ranking
-        fields = ['id', 'student', 'student_name', 'score', 'position']
+        fields = ["id", "student", "student_name", "points"]
 
 
 class TopRankingSerializer(serializers.Serializer):

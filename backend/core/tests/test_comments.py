@@ -38,6 +38,12 @@ class CommentTests(APITestCase):
         # second submission for ranking test
         self.submission2 = Submission.objects.create(task=self.task2, student=self.student_profile, file="file2.txt")
 
+        # assign grades so ranking has points
+        self.submission.grade = 80
+        self.submission.save()
+        self.submission2.grade = 90
+        self.submission2.save()
+
     def test_comment_viewset_creates_comment_with_authenticated_user(self):
         url = reverse('comment-list')
         data = {"submission": self.submission.id, "text": "Hello"}
@@ -68,8 +74,8 @@ class CommentTests(APITestCase):
         url = "/api/top-ranking/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data[0]['username'], self.user.username)
-        self.assertEqual(response.data[0]['completed'], 2)
+        self.assertEqual(response.data[0]['student_name'], self.user.username)
+        self.assertEqual(response.data[0]['points'], 170)
 
     def test_my_tasks_endpoint_returns_sorted_tasks(self):
         url = "/api/my-tasks/"
