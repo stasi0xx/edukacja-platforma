@@ -131,6 +131,21 @@ class MyStudentProfileView(APIView):
         return Response(StudentProfileSerializer(profile).data)
 
 
+class CurrentUserView(APIView):
+    """Return basic info about the authenticated user."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        data = {
+            "id": user.id,
+            "username": user.username,
+            "role": getattr(user, "role", None),
+        }
+        return Response(data)
+
+
 class TopRankingView(APIView):
     permission_classes = [IsAuthenticated]
 

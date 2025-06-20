@@ -70,6 +70,7 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path("api/my-student-profile/", core_views.MyStudentProfileView.as_view()),
+    path("api/me/", core_views.CurrentUserView.as_view()),
     path("api/my-tasks/", my_tasks),
     path("api/submit-task/", SubmissionUploadView.as_view(), name="submit-task"),
     path(

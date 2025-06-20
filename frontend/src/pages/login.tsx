@@ -1,6 +1,7 @@
 // src/pages/login.tsx
 import { useState } from "react"
 import { useRouter } from "next/router"
+import { fetchCurrentUser } from "@/lib/api"
 
 export default function LoginPage() {
     const [username, setUsername] = useState("")
@@ -22,7 +23,21 @@ export default function LoginPage() {
             if (res.ok) {
                 localStorage.setItem("access_token", data.access)
                 localStorage.setItem("refresh_token", data.refresh)
-                router.push("/student")
+
+                try {
+                    const user = await fetchCurrentUser(data.access)
+                    localStorage.setItem("user_role", user.role)
+                    if (user.role === "student") {
+                        router.push("/student")
+                    } else if (user.role === "teacher") {
+                        router.push("/teacher")
+                    } else {
+                        router.push("/")
+                    }
+                } catch (e) {
+                    console.error(e)
+                    router.push("/")
+                }
             } else {
                 setError(data.detail || "Błędne dane logowania")
             }
