@@ -150,16 +150,12 @@ class TopRankingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        students = (
-            StudentProfile.objects.annotate(
-                completed=models.Count("submissions")
-            )
-            .order_by("-completed")[:10]
+        rankings = (
+            Ranking.objects.select_related("student__user")
+            .order_by("-points")[:10]
         )
-        data = [
-            {"username": s.user.username, "completed": s.completed} for s in students
-        ]
-        return Response(data)
+        serializer = RankingSerializer(rankings, many=True)
+        return Response(serializer.data)
 
 
 class TeacherMyStudentsView(APIView):
