@@ -11,7 +11,7 @@ services:
       - key: SECRET_KEY
         value: "django-insecure-7m4q*je8e$*kp0@wkwpk=v-k4^p#ww#7gu%+1=v0y418i$6)*4"
       - key: ALLOWED_HOSTS
-        value: "twojadomena.onrender.com"
+        value: "edukacja-platforma.onrender.com"
       - key: DATABASE_URL
         fromDatabase:
           name: my-database
