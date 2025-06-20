@@ -13,6 +13,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 
+def _get_bool_env(var_name: str, default: bool = False) -> bool:
+    """Return boolean value from environment variables."""
+    val = os.getenv(var_name)
+    if val is None:
+        return default
+    return val.lower() in {"1", "true", "t", "yes"}
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,10 +28,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-7m4q*je8e$*kp0@wkwpk=v-k4^p#ww#7gu%+1=v0y418i$6)*4"
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    "django-insecure-7m4q*je8e$*kp0@wkwpk=v-k4^p#ww#7gu%+1=v0y418i$6)*4",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _get_bool_env("DEBUG", default=True)
 
 ALLOWED_HOSTS = ["edukacja-platforma.onrender.com"]
 
