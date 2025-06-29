@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Comment {
     id: number;
@@ -25,9 +26,10 @@ const CommentSection: React.FC<Props> = ({ submissionId }) => {
 
     const fetchComments = () => {
         if (!token) return;
+        console.log("Submission ID:", submissionId);
         setLoading(true);
         axios
-            .get(`/api/teacher/submission/${submissionId}/comments/`, {
+            .get(`${API_URL}api/teacher/submission/${submissionId}/comments/`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
             .then((res) => setComments(res.data))
@@ -35,7 +37,11 @@ const CommentSection: React.FC<Props> = ({ submissionId }) => {
             .finally(() => setLoading(false));
     };
 
-    useEffect(fetchComments, [submissionId, token]);
+    useEffect(() => {
+        if (submissionId && token) {
+            fetchComments();
+        }
+    }, [submissionId, token]);
 
     const addComment = async () => {
         if (!token || !text) return;
@@ -43,7 +49,7 @@ const CommentSection: React.FC<Props> = ({ submissionId }) => {
         setError('');
         try {
             await axios.post(
-                `/api/teacher/submission/${submissionId}/add_comment/`,
+                `http://localhost:8000/api/teacher/submission/${submissionId}/add_comment/`,
                 { text },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

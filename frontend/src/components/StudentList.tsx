@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Student {
     id: number;
@@ -16,12 +17,13 @@ const StudentList: React.FC = () => {
     useEffect(() => {
         const token = localStorage.getItem('access_token');
         axios
-            .get('/api/teacher/my-students/', {
+            .get(`${API_URL}/api/teacher/my-students/`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
             .then((res) => setStudents(res.data))
             .catch(() => setError('Failed to load students'))
             .finally(() => setLoading(false));
+
     }, []);
 
     if (loading) return <p>Loading...</p>;

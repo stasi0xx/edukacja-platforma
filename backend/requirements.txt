@@ -5,3 +5,5 @@ djangorestframework-simplejwt
 drf-yasg
 gunicorn
 whitenoise
+django-extensions
+psycopg2-binary

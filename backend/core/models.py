@@ -17,7 +17,7 @@ class User(AbstractUser):
 
 
 class TeacherProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="teacherprofile")
     subject = models.CharField(max_length=100)
     bio = models.TextField(blank=True)
 
@@ -25,7 +25,7 @@ class TeacherProfile(models.Model):
         return self.user.username
 
 
-class Group(models.Model):
+class ClassGroup(models.Model):
     name = models.CharField(max_length=100)
     teacher = models.ForeignKey("TeacherProfile", on_delete=models.CASCADE, related_name="groups")
 
@@ -36,7 +36,7 @@ class Group(models.Model):
 class StudentProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     points = models.PositiveIntegerField(default=0)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="students", null=True, blank=True)
+    group = models.ForeignKey(ClassGroup, on_delete=models.CASCADE, related_name="students", null=True, blank=True)
 
     def __str__(self):
         return self.user.username
@@ -60,6 +60,7 @@ class Task(models.Model):
         TeacherProfile, related_name="tasks", on_delete=models.SET_NULL, null=True
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    file = models.FileField(upload_to='task_files/', null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -70,6 +71,7 @@ def submission_upload_path(instance, filename):
 
 
 class Submission(models.Model):
+    id =  models.AutoField(primary_key=True)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="submissions")
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name="submissions")
     file = models.FileField(upload_to=submission_upload_path, null=True, blank=True)
@@ -79,7 +81,7 @@ class Submission(models.Model):
     submitted_at = models.DateTimeField(null=True, blank=True, default=timezone.now)
     status = models.CharField(
         max_length=20,
-        choices=[("pending", "Pending"), ("submitted", "Submitted")],
+        choices=[("pending", "Pending"), ("submitted", "Submitted"), ("approved", "Approved")],
         default="submitted",
     )
     created_at = models.DateTimeField(auto_now_add=True)

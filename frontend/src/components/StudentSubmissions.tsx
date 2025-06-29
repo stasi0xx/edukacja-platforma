@@ -2,13 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import CommentSection from './CommentSection';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Submission {
     id: number;
-    task_name: string;
+    student: number;
+    task: {
+        id: number;
+        name: string;
+        description: string;
+        file: string;
+    };
+    grade: number | null;
+    file: string;
     status: string;
-    submitted_at?: string | null;
-    file_url?: string | null;
+    submitted_at: string;
 }
 
 const StudentSubmissions: React.FC = () => {
@@ -18,18 +26,62 @@ const StudentSubmissions: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showComments, setShowComments] = useState<Record<number, boolean>>({});
+    const [expandedSubId, setExpandedSubId] = useState<number | null>(null);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     useEffect(() => {
         if (!studentId) return;
         const token = localStorage.getItem('access_token');
         axios
-            .get(`/api/teacher/student/${studentId}/submissions/`, {
+            .get(`${API_URL}/api/submissions/?student=${studentId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
-            .then((res) => setSubmissions(res.data))
+            .then((res) => {
+                console.log("RESPONSE DATA", res.data);
+                setSubmissions(res.data);
+            })
             .catch(() => setError('Failed to fetch submissions'))
             .finally(() => setLoading(false));
     }, [studentId]);
+
+
+    const handleApprove = (submissionId: number) => {
+        const token = localStorage.getItem('access_token');
+
+        axios
+            .patch(
+                `${API_URL}/api/submissions/${submissionId}/`,
+                { status: 'approved' },
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+            .then((res) => {
+                // lokalna aktualizacja stanu
+                setSubmissions((prev) =>
+                    prev.map((s) =>
+                        s.id === submissionId ? { ...s, status: 'approved' } : s
+                    )
+                );
+            })
+            .catch((err) => {
+                console.error('Approval error', err);
+            });
+    };
+
+    const handleGrade = async (submissionId: number, grade: number) => {
+        const token = localStorage.getItem("access_token");
+
+        await axios.patch(
+            `${API_URL}/api/submissions/${submissionId}/set_grade/`,
+            { grade },
+            {
+                headers: { Authorization: `Bearer ${token}` },
+            }
+        );
+    };
+
+    const toggleDetails = (id: number) => {
+        setExpandedSubId(expandedSubId === id ? null : id);
+    };
 
     const toggleComments = (subId: number) => {
         setShowComments((p) => ({ ...p, [subId]: !p[subId] }));
@@ -49,40 +101,85 @@ const StudentSubmissions: React.FC = () => {
                         <div key={sub.id} className="p-4 border rounded shadow-sm bg-white">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="font-semibold">{sub.task_name}</h3>
+                                    <h3
+                                        className="font-semibold cursor-pointer hover:underline"
+                                        onClick={() => toggleDetails(sub.id)}
+                                    >
+                                        {sub.task.name}
+                                    </h3>
+                                    {expandedSubId === sub.id && (
+                                        <div className="mt-2 space-y-2 bg-gray-50 p-3 rounded shadow-inner">
+                                            {/* Załącznik */}
+                                            {sub.file ? (
+                                                <img
+                                                    src={sub.file}
+                                                    alt="Submission File"
+                                                    className="max-w-xs border rounded"
+                                                    onClick={() => setSelectedImage(sub.file!)}
+                                                />
+                                            ) : (
+                                                <p>No file uploaded</p>
+                                            )}
+
+                                            {/* Przycisk Zatwierdzenia */}
+
+                                            <div>
+                                                <strong>Ocena:</strong>{" "}
+                                                {sub.grade !== null && sub.grade !== undefined
+                                                    ? `${sub.grade} pkt`
+                                                    : "Brak oceny"}
+                                            </div>
+
+                                            <select
+                                                onChange={(e) => handleGrade(sub.id, parseInt(e.target.value))}
+                                                value={sub.grade ?? ''}
+                                            >
+                                                <option value="">– wybierz ocenę –</option>
+                                                {[0, 1, 2, 3, 4, 5, 6].map((g) => (
+                                                    <option key={g} value={g}>
+                                                        {g} pkt
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={() => handleApprove(sub.id)}
+                                                className="bg-green-600 text-white px-4 py-1 rounded"
+                                            >
+                                                Zatwierdź zadanie
+                                            </button>
+                                        </div>
+                                    )}
                                     <p className="text-sm text-gray-600">
                                         Status:{' '}
-                                        <span
-                                            className={`px-2 py-0.5 rounded ${sub.status === 'submitted' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}
-                                        >
-                                            {sub.status}
-                                        </span>
+                                        {sub.status === "submitted" ? (
+                                            <span className="text-red-600 font-semibold">Do zatwierdzenia</span>
+                                        ) : sub.status === "approved" ? (
+                                            <span className="text-blue-600 font-semibold">🟦 Zatwierdzone</span>
+                                        ) : (
+                                            <span className="text-gray-400">Nieoddane</span>
+                                        )}
                                     </p>
                                     <p className="text-sm text-gray-500">
                                         Submitted:{' '}
                                         {sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'not submitted'}
                                     </p>
-                                    {sub.file_url && (
-                                        <a
-                                            href={sub.file_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-blue-600 text-sm underline"
-                                        >
-                                            File
-                                        </a>
-                                    )}
                                 </div>
                                 <button
                                     onClick={() => toggleComments(sub.id)}
                                     className="bg-blue-600 text-white px-3 py-1 rounded h-fit"
                                 >
-                                    {showComments[sub.id] ? 'Hide Comments' : 'See Comments'}
+                                    {showComments[sub.id] ? 'Zwiń komentarze' : 'Pokaż komentarze'}
                                 </button>
                             </div>
-                            {showComments[sub.id] && <CommentSection submissionId={sub.id} />}
+
+                            {showComments[sub.id] && <CommentSection key={sub.id} submissionId={sub.id} />}
                         </div>
                     ))}
+                </div>
+            )}
+            {selectedImage && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex justify-center items-center" onClick={() => setSelectedImage(null)}>
+                    <img src={selectedImage} alt="Full Preview" className="max-h-[90%] max-w-[90%] rounded shadow-lg" />
                 </div>
             )}
         </div>

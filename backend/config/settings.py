@@ -36,7 +36,7 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _get_bool_env("DEBUG", default=True)
 
-ALLOWED_HOSTS = ["edukacja-platforma.onrender.com"]
+ALLOWED_HOSTS = ["edukacja-platforma.onrender.com", "localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_yasg",
     "core",
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -92,8 +93,12 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "edukacja",
+        "USER": "edukacja",
+        "PASSWORD": "edukacja",
+        "HOST": "db",
+        "PORT": "5432",
     }
 }
 

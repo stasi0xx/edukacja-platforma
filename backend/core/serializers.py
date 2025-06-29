@@ -10,13 +10,15 @@ from .models import (
     TeacherProfile,
     User,
     ParentChildRelation,
-    Group,
+    ClassGroup,
 )
 
 class TaskSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     submission_id = serializers.SerializerMethodField()
-
+    submission = serializers.SerializerMethodField()
+    file = serializers.FileField(required=False, allow_null=True)
+    
     class Meta:
         model = Task
         fields = [
@@ -24,21 +26,25 @@ class TaskSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "deadline",
+            "file",
             "created_at",
             "status",
             "submission_id",
+            "submission",
         ]
+
+    def create(self, validated_data):
+        # created_by jest ustawiany ręcznie w widoku
+        return Task.objects.create(**validated_data)
 
     def get_status(self, obj):
         request = self.context.get("request")
         if not request:
             return False
-
         user = request.user
         student = getattr(user, "studentprofile", None)
         if not student:
             return False
-
         return Submission.objects.filter(task=obj, student=student).exists()
 
     def get_submission_id(self, obj):
@@ -51,19 +57,47 @@ class TaskSerializer(serializers.ModelSerializer):
             return None
         submission = Submission.objects.filter(task=obj, student=student).first()
         return submission.id if submission else None
+    def get_submission(self, obj):  # <- NOWA METODA
+        request = self.context.get("request")
+        if not request:
+            return None
+        user = request.user
+        student = getattr(user, "studentprofile", None)
+        if not student:
+            return None
+        submission = Submission.objects.filter(task=obj, student=student).first()
+        if not submission:
+            return None
+        return SubmissionSerializer(submission).data
+
 
 class SubmissionSerializer(serializers.ModelSerializer):
+    task = TaskSerializer(read_only=True)
+    task_id = serializers.PrimaryKeyRelatedField(
+        queryset=Task.objects.all(), source="task", write_only=True
+    )
     class Meta:
         model = Submission
-        fields = ["id", "student", "task", "file", "status", "submitted_at"]
-        read_only_fields = ["student", "status", "submitted_at"]
+        fields = ["id", "student", "task", "task_id", "grade", "file", "status", "submitted_at"]
+        read_only_fields = ['id',"student", 'created_at']
 
     def create(self, validated_data):
         request = self.context["request"]
-        validated_data["student"] = request.user.studentprofile
-        validated_data["status"] = "submitted"
-        validated_data["submitted_at"] = timezone.now()
-        return super().create(validated_data)
+        student = request.user.studentprofile
+        task = validated_data["task"]
+
+        submission, created = Submission.objects.update_or_create(
+            student=student,
+            task=task,
+            defaults={
+                "file": validated_data.get("file"),
+                "status": "submitted",
+                "submitted_at": timezone.now()
+            }
+        )
+
+        return submission
+
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField(read_only=True)
 
@@ -135,5 +169,5 @@ class ParentChildRelationSerializer(serializers.ModelSerializer):
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Group
+        model = ClassGroup
         fields = '__all__'
